@@ -1,0 +1,161 @@
+---
+title: "Exploring Glowworm Observations with Tourism and Weather Data"
+format: html
+---
+
+## Introduction
+
+The `ecotourism` package contains wildlife occurrence data, tourism data, and daily weather data for Australia.
+
+In this tutorial, we will investigate **glowworm observations in the Derwent Valley region of Tasmania during November 2018**.
+
+We will practice joining three datasets:
+
+* `glowworms` — wildlife occurrence records
+* `weather` — daily weather observations
+* `tourism_quarterly` — quarterly tourism trips
+
+The scientific name of the glowworm in this example is *Arachnocampa tasmaniensis*.
+
+```{r}
+library(ecotourism)
+```
+
+## Exploring the occurrence data
+
+First, load the glowworm occurrence data.
+
+```{r}
+data(glowworms)
+
+head(glowworms)
+```
+
+The occurrence data contain the observation date, time, location, organism name, state, and weather-station ID.
+
+For this tutorial, we are interested in observations associated with weather station `949630-99999`.
+
+### Question 1
+
+**How many *Arachnocampa tasmaniensis* observations were recorded at weather station `949630-99999` during November 2018, and on which dates did they occur?**
+
+```{r}
+glowworms[
+  glowworms$ws_id == "949630-99999" &
+  glowworms$year == 2018 &
+  glowworms$month == 11,
+  c("date", "time", "obs_lat", "obs_lon", "sci_name")
+]
+```
+
+The resulting observation occurs on **28 November 2018**.
+
+## Joining occurrence data with weather data
+
+The weather dataset contains daily measurements for the weather stations.
+
+```{r}
+data(weather)
+
+head(weather)
+```
+
+Because weather observations are recorded by both station and date, we can join the occurrence and weather datasets using `ws_id` and `date`.
+
+```{r}
+glow_weather <- merge(
+  glowworms,
+  weather,
+  by = c("ws_id", "date")
+)
+```
+
+We can then select the observation from the Derwent Valley example.
+
+```{r}
+derwent_glowworm_weather <- glow_weather[
+  glow_weather$ws_id == "949630-99999" &
+  glow_weather$date == as.Date("2018-11-28"),
+]
+```
+
+### Question 2
+
+**What were the temperature, minimum temperature, maximum temperature, and rainfall on the day the glowworm was observed?**
+
+```{r}
+derwent_glowworm_weather[
+  ,
+  c("date", "sci_name", "temp", "min", "max", "prcp")
+]
+```
+
+For 28 November 2018, the weather data show:
+
+* Mean temperature: **16.45°C**
+* Minimum temperature: **10.1°C**
+* Maximum temperature: **22.8°C**
+* Rainfall: **42.00 mm**
+
+## Joining with tourism data
+
+The `tourism_region` dataset connects weather stations with tourism regions.
+
+```{r}
+data(tourism_region)
+
+tourism_region[
+  tourism_region$ws_id == "949630-99999",
+]
+```
+
+Weather station `949630-99999` is associated with the **Derwent Valley** region, which has `region_id` 648.
+
+Now load the quarterly tourism data.
+
+```{r}
+data(tourism_quarterly)
+
+head(tourism_quarterly)
+```
+
+Tourism data are recorded by **quarter**, rather than month.
+
+November falls within the fourth quarter (Q4), so we can investigate the tourism data for Derwent Valley during 2018 Q4.
+
+### Question 3
+
+**How many holiday trips were recorded for the Derwent Valley region during the fourth quarter of 2018, when the November 2018 glowworm observation occurred?**
+
+```{r}
+tourism_quarterly[
+  tourism_quarterly$region_id == 648 &
+  tourism_quarterly$year == 2018 &
+  tourism_quarterly$quarter == 4 &
+  tourism_quarterly$purpose == "Holiday",
+]
+```
+
+The tourism data show **6.3322 thousand holiday trips** for Derwent Valley in Q4 2018.
+
+## Putting the three datasets together
+
+We can now connect the information from the three datasets:
+
+| Dataset    | Information                                                    |
+| ---------- | -------------------------------------------------------------- |
+| Occurrence | *Arachnocampa tasmaniensis* observed on 28 November 2018       |
+| Weather    | 16.45°C mean temperature and 42 mm rainfall                    |
+| Tourism    | 6.3322 thousand holiday trips in Derwent Valley during Q4 2018 |
+
+This example demonstrates how wildlife occurrence records can be combined with weather and tourism information to explore conditions associated with wildlife observations.
+
+## Key learning points
+
+This exercise demonstrates three important data-wrangling operations:
+
+1. **Joining occurrence and weather data** using `ws_id` and `date`.
+2. **Connecting a weather station to a tourism region** using `ws_id`.
+3. **Matching a monthly occurrence to quarterly tourism data** by converting November to Q4.
+
+The different time scales are important: occurrence and weather data are daily, while tourism data are quarterly.
